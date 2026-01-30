@@ -69,4 +69,27 @@ public sealed class QueryService
     {
         Patch(q => q with { SortBy = field, SortDir = direction });
     }
+
+    /// <summary>
+    /// Set grouping mode.
+    /// </summary>
+    public void SetGroupBy(GroupBy groupBy)
+    {
+        Patch(q => q with { GroupBy = groupBy });
+    }
+
+    /// <summary>
+    /// Cycle through grouping modes: None -> Day -> Month -> None
+    /// </summary>
+    public void CycleGroupBy()
+    {
+        var next = Current.GroupBy switch
+        {
+            GroupBy.None => GroupBy.Day,
+            GroupBy.Day => GroupBy.Month,
+            GroupBy.Month => GroupBy.None,
+            _ => GroupBy.None
+        };
+        SetGroupBy(next);
+    }
 }

@@ -70,6 +70,18 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _resultSummary = string.Empty;
 
+    // Grouping state
+    [ObservableProperty]
+    private GroupBy _groupBy = GroupBy.None;
+
+    [ObservableProperty]
+    private ObservableCollection<MediaGroup> _groups = [];
+
+    /// <summary>
+    /// True when the grid should display grouped items.
+    /// </summary>
+    public bool IsGrouped => GroupBy != GroupBy.None;
+
     public MainViewModel(
         ILibraryStore libraryStore,
         IMediaItemStore itemStore,
@@ -133,6 +145,12 @@ public partial class MainViewModel : ObservableObject
         ApplyFiltersImmediate();
     }
 
+    partial void OnGroupByChanged(GroupBy value)
+    {
+        OnPropertyChanged(nameof(IsGrouped));
+        ApplyFiltersImmediate();
+    }
+
     private void DebounceSearch()
     {
         _searchDebounce?.Cancel();
@@ -163,7 +181,8 @@ public partial class MainViewModel : ObservableObject
             MediaType: MediaTypeFilter,
             FavoritesOnly: FavoritesOnly,
             SortBy: SortField,
-            SortDir: SortDirection
+            SortDir: SortDirection,
+            GroupBy: GroupBy
         ));
     }
 
@@ -196,6 +215,28 @@ public partial class MainViewModel : ObservableObject
         MediaTypeFilter = MediaTypeFilter.All;
         SortField = SortField.ModifiedAt;
         SortDirection = SortDir.Desc;
+        GroupBy = GroupBy.None;
+    }
+
+    [RelayCommand]
+    private void SetGroupByNone() => GroupBy = GroupBy.None;
+
+    [RelayCommand]
+    private void SetGroupByDay() => GroupBy = GroupBy.Day;
+
+    [RelayCommand]
+    private void SetGroupByMonth() => GroupBy = GroupBy.Month;
+
+    [RelayCommand]
+    private void CycleGroupBy()
+    {
+        GroupBy = GroupBy switch
+        {
+            GroupBy.None => GroupBy.Day,
+            GroupBy.Day => GroupBy.Month,
+            GroupBy.Month => GroupBy.None,
+            _ => GroupBy.None
+        };
     }
 
     private async void OnQueryChanged(LibraryQuery query)
@@ -208,28 +249,48 @@ public partial class MainViewModel : ObservableObject
         // Capture current selection to restore if possible
         var previousSelectedId = SelectedItem?.Id;
 
-        var result = await _itemStore.QueryAsync(_query.Current, limit: 5000);
-        Items = new ObservableCollection<MediaItem>(result.Items);
-        ItemCount = result.Items.Count;
-        TotalCount = result.TotalCount;
+        IReadOnlyList<MediaItem> allItems;
+
+        if (_query.Current.IsGrouped)
+        {
+            // Grouped mode
+            var result = await _itemStore.QueryGroupedAsync(_query.Current, limit: 5000);
+            Groups = new ObservableCollection<MediaGroup>(result.Groups);
+            TotalCount = result.TotalCount;
+
+            // Flatten for selection service
+            allItems = result.Groups.SelectMany(g => g.Items).ToList();
+            Items = new ObservableCollection<MediaItem>(allItems);
+            ItemCount = allItems.Count;
+        }
+        else
+        {
+            // Flat mode
+            var result = await _itemStore.QueryAsync(_query.Current, limit: 5000);
+            Items = new ObservableCollection<MediaItem>(result.Items);
+            Groups = new ObservableCollection<MediaGroup>();
+            ItemCount = result.Items.Count;
+            TotalCount = result.TotalCount;
+            allItems = result.Items;
+        }
 
         // Update selection service
-        _selection.Items = result.Items;
+        _selection.Items = allItems;
 
         // Try to restore selection
         if (previousSelectedId.HasValue)
         {
-            var stillExists = result.Items.FirstOrDefault(i => i.Id == previousSelectedId);
+            var stillExists = allItems.FirstOrDefault(i => i.Id == previousSelectedId);
             if (stillExists is not null)
             {
                 _selection.Select(stillExists);
             }
-            else if (result.Items.Count > 0)
+            else if (allItems.Count > 0)
             {
                 _selection.SelectFirst();
             }
         }
-        else if (result.Items.Count > 0 && SelectedItem is null)
+        else if (allItems.Count > 0 && SelectedItem is null)
         {
             _selection.SelectFirst();
         }
@@ -240,13 +301,17 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateResultSummary()
     {
+        var groupInfo = _query.Current.IsGrouped
+            ? $" • {Groups.Count} {(_query.Current.GroupBy == GroupBy.Day ? "days" : "months")}"
+            : "";
+
         if (_query.Current.HasFilters)
         {
-            ResultSummary = $"{ItemCount:N0} of {TotalCount:N0} items";
+            ResultSummary = $"{ItemCount:N0} of {TotalCount:N0} items{groupInfo}";
         }
         else
         {
-            ResultSummary = $"{TotalCount:N0} items";
+            ResultSummary = $"{TotalCount:N0} items{groupInfo}";
         }
     }
 
@@ -310,6 +375,12 @@ public partial class MainViewModel : ObservableObject
         {
             _selection.Select(null);
         }
+    }
+
+    [RelayCommand]
+    private void SelectItem(MediaItem? item)
+    {
+        _selection.Select(item);
     }
 
     #endregion

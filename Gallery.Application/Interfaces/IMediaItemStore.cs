@@ -9,6 +9,11 @@ namespace Gallery.Application.Interfaces;
 public sealed record QueryResult(IReadOnlyList<MediaItem> Items, int TotalCount);
 
 /// <summary>
+/// Result of a grouped library query.
+/// </summary>
+public sealed record GroupedQueryResult(IReadOnlyList<MediaGroup> Groups, int TotalCount);
+
+/// <summary>
 /// Manages indexed media items.
 /// </summary>
 public interface IMediaItemStore
@@ -20,9 +25,15 @@ public interface IMediaItemStore
 
     /// <summary>
     /// Execute a library query with filters, sorting, and pagination.
-    /// This is the primary method for loading the grid.
+    /// Returns a flat list of items.
     /// </summary>
     Task<QueryResult> QueryAsync(LibraryQuery query, int limit = 1000, int offset = 0, CancellationToken ct = default);
+
+    /// <summary>
+    /// Execute a library query with grouping by date.
+    /// Returns items organized into groups (day/month).
+    /// </summary>
+    Task<GroupedQueryResult> QueryGroupedAsync(LibraryQuery query, int limit = 1000, CancellationToken ct = default);
 
     Task<long> UpsertAsync(MediaItem item, CancellationToken ct = default);
     Task UpdateThumbPathAsync(long id, ThumbSize size, string thumbPath, CancellationToken ct = default);

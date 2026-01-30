@@ -148,6 +148,94 @@ public sealed class MediaItemStore : IMediaItemStore
         }
     }
 
+    /// <summary>
+    /// Execute a grouped library query for timeline display.
+    /// Groups items by day or month, using taken_at when available, otherwise modified_at.
+    /// </summary>
+    public async Task<GroupedQueryResult> QueryGroupedAsync(LibraryQuery query, int limit = 1000, CancellationToken ct = default)
+    {
+        var conn = _db.GetConnection();
+
+        var whereClause = BuildWhereClause(query);
+        var orderByClause = BuildOrderByClause(query);
+
+        // Get total count
+        await using var countCmd = conn.CreateCommand();
+        countCmd.CommandText = $"SELECT COUNT(*) FROM items {whereClause}";
+        BindQueryParameters(countCmd, query);
+        var totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync(ct));
+
+        // Get items (limited)
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"{SelectColumns} {whereClause} {orderByClause} LIMIT @limit";
+        BindQueryParameters(cmd, query);
+        cmd.Parameters.AddWithValue("@limit", limit);
+
+        var items = await ReadAllAsync(cmd, ct);
+
+        // Group in memory (SQLite doesn't support complex grouping easily)
+        var groups = GroupItems(items, query.GroupBy);
+
+        return new GroupedQueryResult(groups, totalCount);
+    }
+
+    private static IReadOnlyList<MediaGroup> GroupItems(IReadOnlyList<MediaItem> items, GroupBy groupBy)
+    {
+        if (groupBy == GroupBy.None || items.Count == 0)
+        {
+            // Return single group with all items
+            return new[]
+            {
+                new MediaGroup
+                {
+                    Key = "all",
+                    Title = "All Items",
+                    Items = items
+                }
+            };
+        }
+
+        // Group by effective date (taken_at or modified_at)
+        var grouped = items
+            .GroupBy(item =>
+            {
+                var date = item.TakenAt ?? item.ModifiedAt;
+                return groupBy == GroupBy.Day
+                    ? date.ToString("yyyy-MM-dd")
+                    : date.ToString("yyyy-MM");
+            })
+            .Select(g => new MediaGroup
+            {
+                Key = g.Key,
+                Title = FormatGroupTitle(g.Key, groupBy),
+                Items = g.ToList()
+            })
+            .ToList();
+
+        return grouped;
+    }
+
+    private static string FormatGroupTitle(string key, GroupBy groupBy)
+    {
+        // Parse the key and format nicely
+        if (groupBy == GroupBy.Day && DateOnly.TryParse(key, out var day))
+        {
+            return day.ToString("MMMM d, yyyy"); // "June 15, 2026"
+        }
+
+        if (groupBy == GroupBy.Month && key.Length == 7) // "yyyy-MM"
+        {
+            var parts = key.Split('-');
+            if (int.TryParse(parts[0], out var year) && int.TryParse(parts[1], out var month))
+            {
+                var date = new DateOnly(year, month, 1);
+                return date.ToString("MMMM yyyy"); // "June 2026"
+            }
+        }
+
+        return key;
+    }
+
     public async Task<long> UpsertAsync(MediaItem item, CancellationToken ct = default)
     {
         var conn = _db.GetConnection();

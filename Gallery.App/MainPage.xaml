@@ -22,6 +22,7 @@
         <converters:MediaTypeToIconConverter x:Key="MediaTypeToIconConverter" />
         <converters:IsImageConverter x:Key="IsImageConverter" />
         <converters:FilePathToMediaSourceConverter x:Key="MediaSourceConverter" />
+        <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
 
         <!-- Selection highlight style -->
         <Style x:Key="GridItemStyle" TargetType="Border">
@@ -127,6 +128,44 @@
                                 CornerRadius="4" />
                     </HorizontalStackLayout>
 
+                    <!-- Grouping Buttons -->
+                    <Border BackgroundColor="{StaticResource Gray800}"
+                            StrokeThickness="0"
+                            Padding="2">
+                        <HorizontalStackLayout Spacing="2">
+                            <Button Text="📋"
+                                    Command="{Binding SetGroupByNoneCommand}"
+                                    BackgroundColor="{StaticResource Gray700}"
+                                    TextColor="{StaticResource White}"
+                                    FontSize="12"
+                                    WidthRequest="32"
+                                    HeightRequest="28"
+                                    Padding="0"
+                                    CornerRadius="4"
+                                    ToolTipProperties.Text="Flat view" />
+                            <Button Text="📅"
+                                    Command="{Binding SetGroupByDayCommand}"
+                                    BackgroundColor="{StaticResource Gray700}"
+                                    TextColor="{StaticResource White}"
+                                    FontSize="12"
+                                    WidthRequest="32"
+                                    HeightRequest="28"
+                                    Padding="0"
+                                    CornerRadius="4"
+                                    ToolTipProperties.Text="Group by day" />
+                            <Button Text="📆"
+                                    Command="{Binding SetGroupByMonthCommand}"
+                                    BackgroundColor="{StaticResource Gray700}"
+                                    TextColor="{StaticResource White}"
+                                    FontSize="12"
+                                    WidthRequest="32"
+                                    HeightRequest="28"
+                                    Padding="0"
+                                    CornerRadius="4"
+                                    ToolTipProperties.Text="Group by month" />
+                        </HorizontalStackLayout>
+                    </Border>
+
                     <!-- Result Count -->
                     <Label Text="{Binding ResultSummary}"
                            TextColor="{StaticResource Gray400}"
@@ -183,14 +222,15 @@
                 </Grid>
             </Border>
 
-            <!-- Center: Image Grid -->
+            <!-- Center: Image Grid (Flat mode) -->
             <CollectionView x:Name="ImageGrid"
                             Grid.Row="1" Grid.Column="1"
                             ItemsSource="{Binding Items}"
                             SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                             SelectionMode="Single"
                             SelectionChanged="OnGridSelectionChanged"
-                            BackgroundColor="{StaticResource Gray950}">
+                            BackgroundColor="{StaticResource Gray950}"
+                            IsVisible="{Binding IsGrouped, Converter={StaticResource InverseBoolConverter}}">
                 <CollectionView.ItemsLayout>
                     <GridItemsLayout Orientation="Vertical"
                                      Span="6"
@@ -268,6 +308,116 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
+
+            <!-- Center: Timeline Grid (Grouped mode) -->
+            <ScrollView Grid.Row="1" Grid.Column="1"
+                        BackgroundColor="{StaticResource Gray950}"
+                        IsVisible="{Binding IsGrouped}">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Groups}"
+                                     Spacing="16"
+                                     Padding="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="domain:MediaGroup">
+                            <VerticalStackLayout Spacing="8">
+                                <!-- Sticky group header -->
+                                <Border BackgroundColor="{StaticResource Gray900}"
+                                        Padding="12,8"
+                                        StrokeThickness="0"
+                                        Margin="0,8,0,0">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Text="{Binding Title}"
+                                               FontSize="16"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource White}"
+                                               VerticalOptions="Center" />
+                                        <Label Grid.Column="1"
+                                               Text="{Binding Count, StringFormat='{0} items'}"
+                                               FontSize="12"
+                                               TextColor="{StaticResource Gray400}"
+                                               VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Items in this group -->
+                                <FlexLayout BindableLayout.ItemsSource="{Binding Items}"
+                                            Wrap="Wrap"
+                                            JustifyContent="Start"
+                                            AlignItems="Start">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="domain:MediaItem">
+                                            <Border Style="{StaticResource GridItemStyle}"
+                                                    Margin="2">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=SelectItemCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                    <TapGestureRecognizer NumberOfTapsRequired="2"
+                                                                          Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=ToggleQuickPreviewCommand}" />
+                                                </Border.GestureRecognizers>
+                                                <Grid>
+                                                    <!-- Thumbnail -->
+                                                    <Image Source="{Binding ThumbSmallPath, Converter={StaticResource FilePathConverter}}"
+                                                           Aspect="AspectFill" />
+
+                                                    <!-- Favorite indicator -->
+                                                    <Label Text="♥"
+                                                           FontSize="16"
+                                                           TextColor="{StaticResource Primary}"
+                                                           HorizontalOptions="End"
+                                                           VerticalOptions="Start"
+                                                           Margin="4"
+                                                           IsVisible="{Binding IsFavorite}" />
+
+                                                    <!-- Video overlay -->
+                                                    <Grid IsVisible="{Binding Type, Converter={StaticResource IsVideoConverter}}"
+                                                          HorizontalOptions="Fill"
+                                                          VerticalOptions="Fill">
+                                                        <Border BackgroundColor="#80000000"
+                                                                WidthRequest="36"
+                                                                HeightRequest="36"
+                                                                StrokeShape="RoundRectangle 18"
+                                                                StrokeThickness="0"
+                                                                HorizontalOptions="Center"
+                                                                VerticalOptions="Center">
+                                                            <Label Text="▶"
+                                                                   FontSize="18"
+                                                                   TextColor="{StaticResource White}"
+                                                                   HorizontalOptions="Center"
+                                                                   VerticalOptions="Center" />
+                                                        </Border>
+                                                        <Border BackgroundColor="#B0000000"
+                                                                Padding="4,2"
+                                                                StrokeThickness="0"
+                                                                HorizontalOptions="End"
+                                                                VerticalOptions="End"
+                                                                Margin="4"
+                                                                IsVisible="{Binding Duration, Converter={StaticResource IsNotNullOrEmptyConverter}}">
+                                                            <Label Text="{Binding Duration, Converter={StaticResource DurationConverter}}"
+                                                                   FontSize="10"
+                                                                   TextColor="{StaticResource White}" />
+                                                        </Border>
+                                                    </Grid>
+
+                                                    <!-- Placeholder -->
+                                                    <Border BackgroundColor="{StaticResource Gray700}"
+                                                            IsVisible="{Binding ThumbSmallPath, Converter={StaticResource IsNullOrEmptyConverter}}"
+                                                            HorizontalOptions="Fill"
+                                                            VerticalOptions="Fill">
+                                                        <Label Text="{Binding Type, Converter={StaticResource MediaTypeToIconConverter}}"
+                                                               FontSize="32"
+                                                               TextColor="{StaticResource Gray500}"
+                                                               HorizontalOptions="Center"
+                                                               VerticalOptions="Center" />
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </ScrollView>
 
             <!-- Right Panel: Inspector -->
             <Border Grid.Row="1" Grid.Column="2"
