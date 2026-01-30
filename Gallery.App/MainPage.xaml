@@ -5,6 +5,7 @@
              xmlns:views="clr-namespace:Gallery.App.Views"
              xmlns:converters="clr-namespace:Gallery.App.Converters"
              xmlns:domain="clr-namespace:Gallery.Domain.Models;assembly=Gallery.Domain"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="Gallery.App.MainPage"
              x:DataType="vm:MainViewModel"
              Title="NextGallery"
@@ -16,6 +17,11 @@
         <converters:IsNullOrEmptyConverter x:Key="IsNullOrEmptyConverter" />
         <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
         <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+        <converters:DurationConverter x:Key="DurationConverter" />
+        <converters:IsVideoConverter x:Key="IsVideoConverter" />
+        <converters:MediaTypeToIconConverter x:Key="MediaTypeToIconConverter" />
+        <converters:IsImageConverter x:Key="IsImageConverter" />
+        <converters:FilePathToMediaSourceConverter x:Key="MediaSourceConverter" />
 
         <!-- Selection highlight style -->
         <Style x:Key="GridItemStyle" TargetType="Border">
@@ -212,12 +218,46 @@
                                        Margin="4"
                                        IsVisible="{Binding IsFavorite}" />
 
+                                <!-- Video overlay: play icon + duration -->
+                                <Grid IsVisible="{Binding Type, Converter={StaticResource IsVideoConverter}}"
+                                      HorizontalOptions="Fill"
+                                      VerticalOptions="Fill">
+                                    <!-- Play button icon (center) -->
+                                    <Border BackgroundColor="#80000000"
+                                            WidthRequest="36"
+                                            HeightRequest="36"
+                                            StrokeShape="RoundRectangle 18"
+                                            StrokeThickness="0"
+                                            HorizontalOptions="Center"
+                                            VerticalOptions="Center">
+                                        <Label Text="▶"
+                                               FontSize="18"
+                                               TextColor="{StaticResource White}"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center" />
+                                    </Border>
+
+                                    <!-- Duration badge (bottom-right) -->
+                                    <Border BackgroundColor="#B0000000"
+                                            Padding="4,2"
+                                            StrokeThickness="0"
+                                            HorizontalOptions="End"
+                                            VerticalOptions="End"
+                                            Margin="4"
+                                            IsVisible="{Binding Duration, Converter={StaticResource IsNotNullOrEmptyConverter}}">
+                                        <Label Text="{Binding Duration, Converter={StaticResource DurationConverter}}"
+                                               FontSize="10"
+                                               TextColor="{StaticResource White}" />
+                                    </Border>
+                                </Grid>
+
                                 <!-- Placeholder when no thumb -->
                                 <Border BackgroundColor="{StaticResource Gray700}"
                                         IsVisible="{Binding ThumbSmallPath, Converter={StaticResource IsNullOrEmptyConverter}}"
                                         HorizontalOptions="Fill"
                                         VerticalOptions="Fill">
-                                    <Label Text="🖼"
+                                    <!-- Show different icon for video vs image -->
+                                    <Label Text="{Binding Type, Converter={StaticResource MediaTypeToIconConverter}}"
                                            FontSize="32"
                                            TextColor="{StaticResource Gray500}"
                                            HorizontalOptions="Center"
@@ -264,7 +304,7 @@
                                    FontAttributes="Bold"
                                    LineBreakMode="TailTruncation" />
 
-                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
                                 <Label Grid.Row="0" Grid.Column="0" Text="Size" TextColor="{StaticResource Gray400}" FontSize="12" />
                                 <Label Grid.Row="0" Grid.Column="1" Text="{Binding SelectedItem.SizeBytes, Converter={StaticResource FileSizeConverter}}" TextColor="{StaticResource White}" FontSize="12" />
 
@@ -278,14 +318,20 @@
                                     </Label.Text>
                                 </Label>
 
-                                <Label Grid.Row="2" Grid.Column="0" Text="Modified" TextColor="{StaticResource Gray400}" FontSize="12" />
-                                <Label Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.ModifiedAt, StringFormat='{0:g}'}" TextColor="{StaticResource White}" FontSize="12" />
+                                <!-- Duration row (only visible for videos) -->
+                                <Label Grid.Row="2" Grid.Column="0" Text="Duration" TextColor="{StaticResource Gray400}" FontSize="12"
+                                       IsVisible="{Binding SelectedItem.Type, Converter={StaticResource IsVideoConverter}}" />
+                                <Label Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.Duration, Converter={StaticResource DurationConverter}}" TextColor="{StaticResource White}" FontSize="12"
+                                       IsVisible="{Binding SelectedItem.Type, Converter={StaticResource IsVideoConverter}}" />
 
-                                <Label Grid.Row="3" Grid.Column="0" Text="Taken" TextColor="{StaticResource Gray400}" FontSize="12" />
-                                <Label Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.TakenAt, StringFormat='{0:g}'}" TextColor="{StaticResource White}" FontSize="12" />
+                                <Label Grid.Row="3" Grid.Column="0" Text="Modified" TextColor="{StaticResource Gray400}" FontSize="12" />
+                                <Label Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.ModifiedAt, StringFormat='{0:g}'}" TextColor="{StaticResource White}" FontSize="12" />
 
-                                <Label Grid.Row="4" Grid.Column="0" Text="Type" TextColor="{StaticResource Gray400}" FontSize="12" />
-                                <Label Grid.Row="4" Grid.Column="1" Text="{Binding SelectedItem.Extension}" TextColor="{StaticResource White}" FontSize="12" />
+                                <Label Grid.Row="4" Grid.Column="0" Text="Taken" TextColor="{StaticResource Gray400}" FontSize="12" />
+                                <Label Grid.Row="4" Grid.Column="1" Text="{Binding SelectedItem.TakenAt, StringFormat='{0:g}'}" TextColor="{StaticResource White}" FontSize="12" />
+
+                                <Label Grid.Row="5" Grid.Column="0" Text="Type" TextColor="{StaticResource Gray400}" FontSize="12" />
+                                <Label Grid.Row="5" Grid.Column="1" Text="{Binding SelectedItem.Extension}" TextColor="{StaticResource White}" FontSize="12" />
                             </Grid>
 
                             <!-- Actions -->
@@ -338,11 +384,21 @@
                 <TapGestureRecognizer Command="{Binding CloseQuickPreviewCommand}" />
             </Grid.GestureRecognizers>
 
-            <!-- Preview Image -->
+            <!-- Preview Image (for images) -->
             <Image x:Name="QuickPreviewImage"
                    Source="{Binding SelectedItem.ThumbLargePath, Converter={StaticResource FilePathConverter}}"
                    Aspect="AspectFit"
-                   Margin="60" />
+                   Margin="60"
+                   IsVisible="{Binding SelectedItem.Type, Converter={StaticResource IsImageConverter}}" />
+
+            <!-- Video Player (for videos) -->
+            <toolkit:MediaElement x:Name="QuickPreviewVideo"
+                                  Source="{Binding SelectedItem.Path, Converter={StaticResource MediaSourceConverter}}"
+                                  ShouldAutoPlay="True"
+                                  ShouldShowPlaybackControls="True"
+                                  Aspect="AspectFit"
+                                  Margin="60"
+                                  IsVisible="{Binding SelectedItem.Type, Converter={StaticResource IsVideoConverter}}" />
 
             <!-- Navigation hints -->
             <HorizontalStackLayout HorizontalOptions="Center"

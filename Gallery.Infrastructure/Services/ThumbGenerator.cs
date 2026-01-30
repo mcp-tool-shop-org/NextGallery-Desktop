@@ -20,6 +20,29 @@ public sealed class ThumbGenerator : IThumbGenerator
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif"
     };
 
+    public IReadOnlySet<string> SupportedVideoExtensions { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".mov", ".avi", ".mkv", ".webm", ".wmv", ".m4v"
+    };
+
+    private HashSet<string>? _supportedExtensions;
+
+    public IReadOnlySet<string> SupportedExtensions
+    {
+        get
+        {
+            if (_supportedExtensions is null)
+            {
+                _supportedExtensions = new HashSet<string>(SupportedImageExtensions, StringComparer.OrdinalIgnoreCase);
+                foreach (var ext in SupportedVideoExtensions)
+                {
+                    _supportedExtensions.Add(ext);
+                }
+            }
+            return _supportedExtensions;
+        }
+    }
+
     public async Task<byte[]> GenerateImageThumbAsync(string sourcePath, int maxPixels, CancellationToken ct = default)
     {
         using var image = await Image.LoadAsync(sourcePath, ct);

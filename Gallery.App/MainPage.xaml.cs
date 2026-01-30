@@ -17,6 +17,21 @@ public partial class MainPage : ContentPage
         _selection = selection;
         _prefetch = prefetch; // Hold reference to keep it alive
         BindingContext = viewModel;
+
+        // Subscribe to preview close to stop video
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsQuickPreviewOpen))
+        {
+            if (!_viewModel.IsQuickPreviewOpen)
+            {
+                // Stop video when preview closes
+                QuickPreviewVideo?.Stop();
+            }
+        }
     }
 
     protected override async void OnAppearing()

@@ -18,4 +18,15 @@ public interface IThumbGenerator
     /// Supported image extensions (lowercase, with dot).
     /// </summary>
     IReadOnlySet<string> SupportedImageExtensions { get; }
+
+    /// <summary>
+    /// Supported video extensions (lowercase, with dot).
+    /// Videos are indexed but may not have thumbnails until FFmpeg plugin is available.
+    /// </summary>
+    IReadOnlySet<string> SupportedVideoExtensions { get; }
+
+    /// <summary>
+    /// All supported media extensions (images + videos).
+    /// </summary>
+    IReadOnlySet<string> SupportedExtensions { get; }
 }

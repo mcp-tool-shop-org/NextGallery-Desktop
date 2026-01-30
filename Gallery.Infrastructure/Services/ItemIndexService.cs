@@ -92,9 +92,10 @@ public sealed class ItemIndexService : IItemIndexService
         var extension = fileInfo.Extension.ToLowerInvariant();
         var type = GetMediaType(extension);
 
-        // Try to extract image metadata
+        // Try to extract metadata
         int? width = null, height = null;
         DateTimeOffset? takenAt = null;
+        TimeSpan? duration = null;
 
         if (type == MediaType.Image)
         {
@@ -120,6 +121,47 @@ public sealed class ItemIndexService : IItemIndexService
                 // Metadata extraction failed, continue without
             }
         }
+        else if (type == MediaType.Video)
+        {
+            // Video metadata - MetadataExtractor can read some video formats
+            try
+            {
+                var directories = ImageMetadataReader.ReadMetadata(filePath);
+
+                // Try to extract video dimensions and duration from QuickTime/MP4 metadata
+                foreach (var dir in directories)
+                {
+                    if (dir.Name.Contains("QuickTime", StringComparison.OrdinalIgnoreCase) ||
+                        dir.Name.Contains("MP4", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Look for common video metadata tags
+                        foreach (var tag in dir.Tags)
+                        {
+                            if (tag.Name.Contains("Width", StringComparison.OrdinalIgnoreCase) && width is null)
+                            {
+                                if (int.TryParse(tag.Description, out var w))
+                                    width = w;
+                            }
+                            if (tag.Name.Contains("Height", StringComparison.OrdinalIgnoreCase) && height is null)
+                            {
+                                if (int.TryParse(tag.Description, out var h))
+                                    height = h;
+                            }
+                            if (tag.Name.Contains("Duration", StringComparison.OrdinalIgnoreCase) && duration is null)
+                            {
+                                // Duration might be in various formats
+                                if (TryParseDuration(tag.Description, out var d))
+                                    duration = d;
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Video metadata extraction failed, continue without
+            }
+        }
 
         var item = new MediaItem
         {
@@ -131,11 +173,59 @@ public sealed class ItemIndexService : IItemIndexService
             TakenAt = takenAt,
             Width = width,
             Height = height,
+            Duration = duration,
             LastIndexedAt = DateTimeOffset.UtcNow
         };
 
         var id = await _itemStore.UpsertAsync(item, ct);
         return item with { Id = id };
+    }
+
+    private static bool TryParseDuration(string? description, out TimeSpan duration)
+    {
+        duration = TimeSpan.Zero;
+        if (string.IsNullOrWhiteSpace(description))
+            return false;
+
+        // Try to parse common duration formats
+        // Format: "0:00:30" or "00:30" or "30.5 sec" or "1234 ms"
+        description = description.Trim();
+
+        // Try TimeSpan.TryParse first
+        if (TimeSpan.TryParse(description, out duration))
+            return true;
+
+        // Try seconds format (e.g., "30.5 sec" or "30.5s")
+        if (description.EndsWith("sec", StringComparison.OrdinalIgnoreCase) ||
+            description.EndsWith("s", StringComparison.OrdinalIgnoreCase))
+        {
+            var numPart = description.TrimEnd('s', 'S', 'e', 'E', 'c', 'C', ' ');
+            if (double.TryParse(numPart, out var seconds))
+            {
+                duration = TimeSpan.FromSeconds(seconds);
+                return true;
+            }
+        }
+
+        // Try milliseconds format
+        if (description.EndsWith("ms", StringComparison.OrdinalIgnoreCase))
+        {
+            var numPart = description[..^2].Trim();
+            if (double.TryParse(numPart, out var ms))
+            {
+                duration = TimeSpan.FromMilliseconds(ms);
+                return true;
+            }
+        }
+
+        // Try plain number (assume seconds)
+        if (double.TryParse(description, out var plainSeconds))
+        {
+            duration = TimeSpan.FromSeconds(plainSeconds);
+            return true;
+        }
+
+        return false;
     }
 
     private IEnumerable<string> EnumerateMediaFiles(string folderPath)
@@ -147,7 +237,7 @@ public sealed class ItemIndexService : IItemIndexService
         };
 
         return System.IO.Directory.EnumerateFiles(folderPath, "*", options)
-            .Where(f => _thumbGenerator.SupportedImageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+            .Where(f => _thumbGenerator.SupportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
     }
 
     private static MediaType GetMediaType(string extension)
