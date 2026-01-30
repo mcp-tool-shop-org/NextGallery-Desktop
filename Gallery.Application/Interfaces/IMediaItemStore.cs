@@ -4,6 +4,11 @@ using Gallery.Domain.Models;
 namespace Gallery.Application.Interfaces;
 
 /// <summary>
+/// Result of a library query with pagination info.
+/// </summary>
+public sealed record QueryResult(IReadOnlyList<MediaItem> Items, int TotalCount);
+
+/// <summary>
 /// Manages indexed media items.
 /// </summary>
 public interface IMediaItemStore
@@ -12,7 +17,13 @@ public interface IMediaItemStore
     Task<MediaItem?> GetByPathAsync(string path, CancellationToken ct = default);
     Task<IReadOnlyList<MediaItem>> GetAllAsync(int limit = 1000, int offset = 0, CancellationToken ct = default);
     Task<IReadOnlyList<MediaItem>> GetFavoritesAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<MediaItem>> SearchAsync(string query, CancellationToken ct = default);
+
+    /// <summary>
+    /// Execute a library query with filters, sorting, and pagination.
+    /// This is the primary method for loading the grid.
+    /// </summary>
+    Task<QueryResult> QueryAsync(LibraryQuery query, int limit = 1000, int offset = 0, CancellationToken ct = default);
+
     Task<long> UpsertAsync(MediaItem item, CancellationToken ct = default);
     Task UpdateThumbPathAsync(long id, ThumbSize size, string thumbPath, CancellationToken ct = default);
     Task SetFavoriteAsync(long id, bool isFavorite, CancellationToken ct = default);

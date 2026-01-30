@@ -17,10 +17,15 @@ public partial class MainViewModel : ObservableObject
     private readonly IItemIndexService _indexService;
     private readonly ThumbWorker _thumbWorker;
     private readonly SelectionService _selection;
+    private readonly QueryService _query;
 
     // Grid layout info for keyboard navigation
     private int _columnsPerRow = 6;
     private int _itemsPerPage = 24;
+
+    // Debounce for search
+    private CancellationTokenSource? _searchDebounce;
+    private const int SearchDebounceMs = 200;
 
     [ObservableProperty]
     private ObservableCollection<LibraryFolder> _folders = [];
@@ -41,29 +46,54 @@ public partial class MainViewModel : ObservableObject
     private int _itemCount;
 
     [ObservableProperty]
+    private int _totalCount;
+
+    [ObservableProperty]
     private bool _isQuickPreviewOpen;
+
+    // Search and filter state
+    [ObservableProperty]
+    private string _searchText = string.Empty;
+
+    [ObservableProperty]
+    private bool _favoritesOnly;
+
+    [ObservableProperty]
+    private MediaTypeFilter _mediaTypeFilter = MediaTypeFilter.All;
+
+    [ObservableProperty]
+    private SortField _sortField = SortField.ModifiedAt;
+
+    [ObservableProperty]
+    private SortDir _sortDirection = SortDir.Desc;
+
+    [ObservableProperty]
+    private string _resultSummary = string.Empty;
 
     public MainViewModel(
         ILibraryStore libraryStore,
         IMediaItemStore itemStore,
         IItemIndexService indexService,
         ThumbWorker thumbWorker,
-        SelectionService selection)
+        SelectionService selection,
+        QueryService query)
     {
         _libraryStore = libraryStore;
         _itemStore = itemStore;
         _indexService = indexService;
         _thumbWorker = thumbWorker;
         _selection = selection;
+        _query = query;
 
         _thumbWorker.ThumbGenerated += OnThumbGenerated;
         _selection.SelectionChanged += OnSelectionChanged;
+        _query.QueryChanged += OnQueryChanged;
     }
 
     public async Task InitializeAsync()
     {
         await LoadFoldersAsync();
-        await LoadItemsAsync();
+        await ExecuteQueryAsync();
         _thumbWorker.Start();
     }
 
@@ -75,6 +105,152 @@ public partial class MainViewModel : ObservableObject
         _columnsPerRow = columns;
         _itemsPerPage = columns * visibleRows;
     }
+
+    #region Search and Filters
+
+    partial void OnSearchTextChanged(string value)
+    {
+        DebounceSearch();
+    }
+
+    partial void OnFavoritesOnlyChanged(bool value)
+    {
+        ApplyFiltersImmediate();
+    }
+
+    partial void OnMediaTypeFilterChanged(MediaTypeFilter value)
+    {
+        ApplyFiltersImmediate();
+    }
+
+    partial void OnSortFieldChanged(SortField value)
+    {
+        ApplyFiltersImmediate();
+    }
+
+    partial void OnSortDirectionChanged(SortDir value)
+    {
+        ApplyFiltersImmediate();
+    }
+
+    private void DebounceSearch()
+    {
+        _searchDebounce?.Cancel();
+        _searchDebounce = new CancellationTokenSource();
+        var ct = _searchDebounce.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(SearchDebounceMs, ct);
+                if (!ct.IsCancellationRequested)
+                {
+                    MainThread.BeginInvokeOnMainThread(() => ApplyFiltersImmediate());
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when typing rapidly
+            }
+        }, ct);
+    }
+
+    private void ApplyFiltersImmediate()
+    {
+        _query.Set(new LibraryQuery(
+            Text: SearchText,
+            MediaType: MediaTypeFilter,
+            FavoritesOnly: FavoritesOnly,
+            SortBy: SortField,
+            SortDir: SortDirection
+        ));
+    }
+
+    [RelayCommand]
+    private void ToggleFavoritesFilter()
+    {
+        FavoritesOnly = !FavoritesOnly;
+    }
+
+    [RelayCommand]
+    private void SetMediaTypeAll() => MediaTypeFilter = MediaTypeFilter.All;
+
+    [RelayCommand]
+    private void SetMediaTypeImages() => MediaTypeFilter = MediaTypeFilter.Images;
+
+    [RelayCommand]
+    private void SetMediaTypeVideos() => MediaTypeFilter = MediaTypeFilter.Videos;
+
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+    }
+
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        SearchText = string.Empty;
+        FavoritesOnly = false;
+        MediaTypeFilter = MediaTypeFilter.All;
+        SortField = SortField.ModifiedAt;
+        SortDirection = SortDir.Desc;
+    }
+
+    private async void OnQueryChanged(LibraryQuery query)
+    {
+        await ExecuteQueryAsync();
+    }
+
+    private async Task ExecuteQueryAsync()
+    {
+        // Capture current selection to restore if possible
+        var previousSelectedId = SelectedItem?.Id;
+
+        var result = await _itemStore.QueryAsync(_query.Current, limit: 5000);
+        Items = new ObservableCollection<MediaItem>(result.Items);
+        ItemCount = result.Items.Count;
+        TotalCount = result.TotalCount;
+
+        // Update selection service
+        _selection.Items = result.Items;
+
+        // Try to restore selection
+        if (previousSelectedId.HasValue)
+        {
+            var stillExists = result.Items.FirstOrDefault(i => i.Id == previousSelectedId);
+            if (stillExists is not null)
+            {
+                _selection.Select(stillExists);
+            }
+            else if (result.Items.Count > 0)
+            {
+                _selection.SelectFirst();
+            }
+        }
+        else if (result.Items.Count > 0 && SelectedItem is null)
+        {
+            _selection.SelectFirst();
+        }
+
+        // Update result summary
+        UpdateResultSummary();
+    }
+
+    private void UpdateResultSummary()
+    {
+        if (_query.Current.HasFilters)
+        {
+            ResultSummary = $"{ItemCount:N0} of {TotalCount:N0} items";
+        }
+        else
+        {
+            ResultSummary = $"{TotalCount:N0} items";
+        }
+    }
+
+    #endregion
 
     #region Keyboard Navigation
 
@@ -175,8 +351,8 @@ public partial class MainViewModel : ObservableObject
             });
 
             await _indexService.ScanAllAsync(progress);
-            await LoadItemsAsync();
-            ScanStatus = $"Scan complete. {ItemCount} items indexed.";
+            await ExecuteQueryAsync();
+            ScanStatus = $"Scan complete. {TotalCount} items indexed.";
         }
         finally
         {
@@ -199,13 +375,19 @@ public partial class MainViewModel : ObservableObject
             });
 
             await _indexService.ScanFolderAsync(folder, progress);
-            await LoadItemsAsync();
-            ScanStatus = $"Scan complete. {ItemCount} items indexed.";
+            await ExecuteQueryAsync();
+            ScanStatus = $"Scan complete. {TotalCount} items indexed.";
         }
         finally
         {
             IsScanning = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task RefreshAsync()
+    {
+        await ExecuteQueryAsync();
     }
 
     #endregion
@@ -222,6 +404,12 @@ public partial class MainViewModel : ObservableObject
         var updated = SelectedItem with { IsFavorite = newValue };
         _selection.UpdateItem(updated);
         UpdateItemInCollection(updated);
+
+        // If favorites filter is on and we unfavorited, item may disappear
+        if (FavoritesOnly && !newValue)
+        {
+            await ExecuteQueryAsync();
+        }
     }
 
     [RelayCommand]
@@ -245,12 +433,6 @@ public partial class MainViewModel : ObservableObject
         });
     }
 
-    [RelayCommand]
-    private async Task RefreshAsync()
-    {
-        await LoadItemsAsync();
-    }
-
     #endregion
 
     #region Data Loading
@@ -259,16 +441,6 @@ public partial class MainViewModel : ObservableObject
     {
         var folders = await _libraryStore.GetAllAsync();
         Folders = new ObservableCollection<LibraryFolder>(folders);
-    }
-
-    private async Task LoadItemsAsync()
-    {
-        var items = await _itemStore.GetAllAsync(limit: 5000);
-        Items = new ObservableCollection<MediaItem>(items);
-        ItemCount = Items.Count;
-
-        // Update selection service
-        _selection.Items = items;
     }
 
     #endregion

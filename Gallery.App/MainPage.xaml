@@ -14,6 +14,8 @@
         <converters:FilePathToImageSourceConverter x:Key="FilePathConverter" />
         <converters:FileSizeConverter x:Key="FileSizeConverter" />
         <converters:IsNullOrEmptyConverter x:Key="IsNullOrEmptyConverter" />
+        <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+        <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
 
         <!-- Selection highlight style -->
         <Style x:Key="GridItemStyle" TargetType="Border">
@@ -46,21 +48,83 @@
                        TextColor="{StaticResource White}"
                        VerticalOptions="Center" />
 
-                <!-- Keyboard hints -->
+                <!-- Search and Filters -->
                 <HorizontalStackLayout Grid.Column="1"
                                        HorizontalOptions="Center"
-                                       Spacing="16">
-                    <Label Text="↑↓←→ Navigate"
-                           TextColor="{StaticResource Gray500}"
-                           FontSize="11"
-                           VerticalOptions="Center" />
-                    <Label Text="Space Preview"
-                           TextColor="{StaticResource Gray500}"
-                           FontSize="11"
-                           VerticalOptions="Center" />
-                    <Label Text="F Favorite"
-                           TextColor="{StaticResource Gray500}"
-                           FontSize="11"
+                                       Spacing="12">
+                    <!-- Search Box -->
+                    <Border BackgroundColor="{StaticResource Gray800}"
+                            StrokeThickness="0"
+                            Padding="8,4"
+                            WidthRequest="280">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0"
+                                   Text="🔍"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Gray400}"
+                                   VerticalOptions="Center"
+                                   Margin="0,0,8,0" />
+                            <Entry Grid.Column="1"
+                                   Text="{Binding SearchText}"
+                                   Placeholder="Search filename..."
+                                   PlaceholderColor="{StaticResource Gray500}"
+                                   TextColor="{StaticResource White}"
+                                   BackgroundColor="Transparent"
+                                   FontSize="13" />
+                            <Button Grid.Column="2"
+                                    Text="×"
+                                    Command="{Binding ClearSearchCommand}"
+                                    BackgroundColor="Transparent"
+                                    TextColor="{StaticResource Gray400}"
+                                    FontSize="16"
+                                    Padding="4"
+                                    WidthRequest="28"
+                                    HeightRequest="28"
+                                    IsVisible="{Binding SearchText, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Filter Buttons -->
+                    <HorizontalStackLayout Spacing="4">
+                        <Button Text="★"
+                                Command="{Binding ToggleFavoritesFilterCommand}"
+                                BackgroundColor="{Binding FavoritesOnly, Converter={StaticResource BoolToColorConverter}}"
+                                TextColor="{StaticResource White}"
+                                FontSize="14"
+                                WidthRequest="36"
+                                HeightRequest="32"
+                                Padding="0"
+                                CornerRadius="4" />
+                        <Button Text="All"
+                                Command="{Binding SetMediaTypeAllCommand}"
+                                BackgroundColor="{StaticResource Gray700}"
+                                TextColor="{StaticResource White}"
+                                FontSize="11"
+                                HeightRequest="32"
+                                Padding="8,0"
+                                CornerRadius="4" />
+                        <Button Text="Images"
+                                Command="{Binding SetMediaTypeImagesCommand}"
+                                BackgroundColor="{StaticResource Gray700}"
+                                TextColor="{StaticResource White}"
+                                FontSize="11"
+                                HeightRequest="32"
+                                Padding="8,0"
+                                CornerRadius="4" />
+                        <Button Text="Videos"
+                                Command="{Binding SetMediaTypeVideosCommand}"
+                                BackgroundColor="{StaticResource Gray700}"
+                                TextColor="{StaticResource White}"
+                                FontSize="11"
+                                HeightRequest="32"
+                                Padding="8,0"
+                                CornerRadius="4" />
+                    </HorizontalStackLayout>
+
+                    <!-- Result Count -->
+                    <Label Text="{Binding ResultSummary}"
+                           TextColor="{StaticResource Gray400}"
+                           FontSize="12"
                            VerticalOptions="Center" />
                 </HorizontalStackLayout>
 
@@ -71,9 +135,6 @@
                     <Button Text="Scan All"
                             Command="{Binding ScanAllCommand}"
                             BackgroundColor="{StaticResource Secondary}" />
-                    <Button Text="Refresh"
-                            Command="{Binding RefreshCommand}"
-                            BackgroundColor="{StaticResource Gray600}" />
                 </HorizontalStackLayout>
             </Grid>
 

@@ -26,6 +26,7 @@ public static class MauiProgram
 
         // Register app services (singletons for state)
         builder.Services.AddSingleton<SelectionService>();
+        builder.Services.AddSingleton<QueryService>();
         builder.Services.AddSingleton<PrefetchService>();
 
         // Register ViewModels

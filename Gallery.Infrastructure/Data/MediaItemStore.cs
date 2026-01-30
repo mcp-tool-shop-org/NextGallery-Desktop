@@ -56,14 +56,96 @@ public sealed class MediaItemStore : IMediaItemStore
         return await ReadAllAsync(cmd, ct);
     }
 
-    public async Task<IReadOnlyList<MediaItem>> SearchAsync(string query, CancellationToken ct = default)
+    /// <summary>
+    /// Execute a library query with filters, sorting, and pagination.
+    /// All filtering happens in SQLite - never in memory.
+    /// </summary>
+    public async Task<QueryResult> QueryAsync(LibraryQuery query, int limit = 1000, int offset = 0, CancellationToken ct = default)
     {
         var conn = _db.GetConnection();
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = SelectColumns + " WHERE path LIKE @query ORDER BY modified_at DESC LIMIT 500";
-        cmd.Parameters.AddWithValue("@query", $"%{query}%");
 
-        return await ReadAllAsync(cmd, ct);
+        // Build WHERE clause
+        var whereClause = BuildWhereClause(query);
+        var orderByClause = BuildOrderByClause(query);
+
+        // Get total count
+        await using var countCmd = conn.CreateCommand();
+        countCmd.CommandText = $"SELECT COUNT(*) FROM items {whereClause}";
+        BindQueryParameters(countCmd, query);
+        var totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync(ct));
+
+        // Get items
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"{SelectColumns} {whereClause} {orderByClause} LIMIT @limit OFFSET @offset";
+        BindQueryParameters(cmd, query);
+        cmd.Parameters.AddWithValue("@limit", limit);
+        cmd.Parameters.AddWithValue("@offset", offset);
+
+        var items = await ReadAllAsync(cmd, ct);
+        return new QueryResult(items, totalCount);
+    }
+
+    private static string BuildWhereClause(LibraryQuery query)
+    {
+        var conditions = new List<string> { "1=1" };
+
+        // Text search (filename/path contains)
+        if (!string.IsNullOrWhiteSpace(query.Text))
+        {
+            conditions.Add("path LIKE '%' || @text || '%' ESCAPE '\\'");
+        }
+
+        // Favorites filter
+        if (query.FavoritesOnly)
+        {
+            conditions.Add("is_favorite = 1");
+        }
+
+        // Media type filter
+        if (query.MediaType != MediaTypeFilter.All)
+        {
+            conditions.Add("type = @mediaType");
+        }
+
+        return "WHERE " + string.Join(" AND ", conditions);
+    }
+
+    private static string BuildOrderByClause(LibraryQuery query)
+    {
+        var direction = query.SortDir == SortDir.Desc ? "DESC" : "ASC";
+
+        var orderBy = query.SortBy switch
+        {
+            SortField.TakenAt => $"COALESCE(taken_at, modified_at) {direction}, path ASC",
+            SortField.ModifiedAt => $"modified_at {direction}, path ASC",
+            SortField.Size => $"size_bytes {direction}, path ASC",
+            SortField.Name => $"path {direction}",
+            _ => $"modified_at {direction}, path ASC"
+        };
+
+        return $"ORDER BY {orderBy}";
+    }
+
+    private static void BindQueryParameters(SqliteCommand cmd, LibraryQuery query)
+    {
+        if (!string.IsNullOrWhiteSpace(query.Text))
+        {
+            // Escape LIKE wildcards so user text is literal
+            var escapedText = query.Text.Trim()
+                .Replace("\\", "\\\\")
+                .Replace("%", "\\%")
+                .Replace("_", "\\_");
+            cmd.Parameters.AddWithValue("@text", escapedText);
+        }
+
+        if (query.MediaType != MediaTypeFilter.All)
+        {
+            // Map filter enum to domain enum
+            var mediaType = query.MediaType == MediaTypeFilter.Images
+                ? (int)MediaType.Image
+                : (int)MediaType.Video;
+            cmd.Parameters.AddWithValue("@mediaType", mediaType);
+        }
     }
 
     public async Task<long> UpsertAsync(MediaItem item, CancellationToken ct = default)
