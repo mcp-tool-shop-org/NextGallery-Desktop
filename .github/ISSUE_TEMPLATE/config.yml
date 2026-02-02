@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/mcp-tool-shop-org/next-gallery#readme
+    about: Check the README and documentation first
+  - name: Discussions
+    url: https://github.com/mcp-tool-shop-org/next-gallery/discussions
+    about: Ask questions and discuss features

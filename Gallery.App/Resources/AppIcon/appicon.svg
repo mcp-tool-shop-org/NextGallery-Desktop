@@ -1,4 +1,53 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="456" height="456" viewBox="0 0 456 456" version="1.1" xmlns="http://www.w3.org/2000/svg">
-    <rect x="0" y="0" width="456" height="456" fill="#512BD4" />
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED"/>
+      <stop offset="100%" style="stop-color:#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#F3F4F6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="512" height="512" rx="96" fill="url(#bgGradient)"/>
+
+  <!-- Gallery grid representation - 4 image cards -->
+
+  <!-- Top-left card (larger, featured image) -->
+  <rect x="56" y="56" width="200" height="200" rx="16" fill="url(#cardGradient)" opacity="0.95"/>
+  <!-- Mountain/landscape icon inside -->
+  <path d="M76 216 L116 156 L146 186 L196 126 L236 216 Z" fill="#9CA3AF"/>
+  <!-- Sun -->
+  <circle cx="206" cy="96" r="24" fill="#FBBF24"/>
+
+  <!-- Top-right card -->
+  <rect x="272" y="56" width="184" height="140" rx="16" fill="url(#cardGradient)" opacity="0.9"/>
+  <!-- Abstract shapes -->
+  <circle cx="324" cy="106" r="28" fill="#EC4899" opacity="0.8"/>
+  <circle cx="376" cy="136" r="32" fill="#8B5CF6" opacity="0.7"/>
+
+  <!-- Bottom-left card -->
+  <rect x="56" y="272" width="184" height="184" rx="16" fill="url(#cardGradient)" opacity="0.9"/>
+  <!-- Portrait silhouette -->
+  <circle cx="148" cy="332" r="36" fill="#6B7280"/>
+  <ellipse cx="148" cy="416" rx="52" ry="32" fill="#6B7280"/>
+
+  <!-- Bottom-right card -->
+  <rect x="256" y="212" width="200" height="244" rx="16" fill="url(#cardGradient)" opacity="0.95"/>
+  <!-- Stacked layers effect (AI generation metaphor) -->
+  <rect x="280" y="244" width="152" height="100" rx="8" fill="#C4B5FD"/>
+  <rect x="288" y="252" width="136" height="84" rx="6" fill="#A78BFA"/>
+  <rect x="296" y="260" width="120" height="68" rx="4" fill="#8B5CF6"/>
+  <!-- Play button (video support) -->
+  <circle cx="356" cy="392" r="32" fill="#4F46E5"/>
+  <path d="M346 376 L346 408 L374 392 Z" fill="white"/>
+
+  <!-- Sparkle/AI indicator -->
+  <g fill="#FCD34D">
+    <path d="M440 40 L444 52 L456 56 L444 60 L440 72 L436 60 L424 56 L436 52 Z"/>
+    <path d="M480 80 L482 88 L490 90 L482 92 L480 100 L478 92 L470 90 L478 88 Z" opacity="0.8"/>
+  </g>
 </svg>

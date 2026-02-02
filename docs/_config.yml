@@ -1,0 +1,38 @@
+# GitHub Pages configuration for NextGallery documentation
+
+title: NextGallery
+description: High-performance Windows gallery for AI-generated images and videos
+url: "https://mcp-tool-shop-org.github.io"
+baseurl: "/next-gallery"
+
+# Theme
+remote_theme: pages-themes/minimal@v0.2.0
+plugins:
+  - jekyll-remote-theme
+
+# Markdown settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+
+# Exclude from build
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+
+# Navigation links (shown in sidebar)
+navigation:
+  - title: Home
+    url: /
+  - title: Privacy Policy
+    url: /PRIVACY
+  - title: Terms of Service
+    url: /TERMS
+  - title: Support
+    url: /SUPPORT
+  - title: GitHub
+    url: https://github.com/mcp-tool-shop-org/next-gallery

@@ -1,10 +1,12 @@
-# NextGallery
+# NextGallery Desktop
 
-[![Build](https://github.com/mcp-tool-shop-org/next-gallery/actions/workflows/build.yml/badge.svg)](https://github.com/mcp-tool-shop-org/next-gallery/actions/workflows/build.yml)
-[![Tests](https://github.com/mcp-tool-shop-org/next-gallery/actions/workflows/test.yml/badge.svg)](https://github.com/mcp-tool-shop-org/next-gallery/actions/workflows/test.yml)
+[![Build](https://github.com/mcp-tool-shop-org/NextGallery-Desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/mcp-tool-shop-org/NextGallery-Desktop/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Windows](https://img.shields.io/badge/Windows-10%2B-blue.svg)](https://www.microsoft.com/windows)
 
-**NextGallery** is a high-performance Windows desktop application for browsing and managing AI-generated images and videos. Built with .NET MAUI and WinUI 3, it provides a native Windows experience with smooth scrolling, instant previews, and powerful organization tools.
+**NextGallery Desktop** is a standalone Windows desktop application for browsing and managing AI-generated images and videos. Built with .NET MAUI and WinUI 3 for native Windows performance.
+
+> **Note:** This is the standalone desktop version. For the CodeComfy VS Code extension integration, see [next-gallery](https://github.com/mcp-tool-shop-org/next-gallery).
 
 ## Features
 
@@ -13,46 +15,51 @@
 - **Instant Previews** - Quick hover previews without opening files
 - **Smart Organization** - Filter by date, prompt, model, or custom tags
 - **Metadata Display** - View generation parameters, prompts, and settings
-- **ComfyUI Integration** - Works seamlessly with [CodeComfy VS Code](https://github.com/mcp-tool-shop-org/codecomfy-vscode)
 - **Video Support** - Preview and organize AI-generated videos
+- **Standalone Mode** - Browse any folder of images without external dependencies
 
-### 2026 Features (New!)
+### Compare Mode
+- **Side-by-Side View** - Compare two images visually
+- **Parameter Diff** - See exactly what changed between generations
+- **Multiple View Modes** - SideBySide, Overlay, or DiffOnly
 
-#### Job Management (Agency)
-- **Delete Jobs** - Remove jobs from index with optional file deletion
-- **Open in Explorer** - Quick access to job output files
-- **Copy Prompt** - One-click copy prompt to clipboard
-- **Copy Metadata** - Export full JSON metadata or human-readable params
-
-#### Compare Mode
-- **Side-by-Side View** - Compare two generations visually
-- **Parameter Diff** - See exactly what changed (seed, prompt, preset, etc.)
-- **Change Summary** - Quick overview of differences
-- **View Modes** - SideBySide, Overlay, or DiffOnly
-
-#### Workflow Search & Filter
-- **Prompt Search** - Find images by prompt text (case-insensitive)
-- **Seed Search** - Exact seed matching for finding variations
-- **Preset Filter** - Filter by model/preset
-- **Favorites Filter** - Show only favorited jobs
-- **Date Range** - Filter by creation date
+### Search & Filter
+- **Text Search** - Find images by filename or embedded metadata
+- **Date Filtering** - Filter by creation or modification date
+- **Favorites** - Mark and filter your best images
 - **Combined Filters** - All filters work together (AND logic)
+
+## Download
+
+- **[Latest Release](https://github.com/mcp-tool-shop-org/NextGallery-Desktop/releases/latest)** - Download MSIX installer
+- **Microsoft Store** - Coming soon
 
 ## Installation
 
 ### Option 1: MSIX Package (Recommended)
 
-1. Download the `.msix` file from [Releases](https://github.com/mcp-tool-shop-org/next-gallery/releases)
+1. Download the `.msix` file from [Releases](https://github.com/mcp-tool-shop-org/NextGallery-Desktop/releases)
 2. Double-click to install
 3. Launch from Start Menu
 
 ### Option 2: Build from Source
 
 ```powershell
-git clone https://github.com/mcp-tool-shop-org/next-gallery
-cd next-gallery
-dotnet build Gallery.App
+git clone https://github.com/mcp-tool-shop-org/NextGallery-Desktop
+cd NextGallery-Desktop
+dotnet build Gallery.App --framework net9.0-windows10.0.19041.0
 ```
+
+## Usage
+
+1. Launch NextGallery Desktop
+2. Click "Add Folder" to select an image folder
+3. Browse, search, and organize your images
+
+### Supported Formats
+
+**Images:** PNG, JPG, JPEG, WebP, BMP, GIF
+**Videos:** MP4, WebM, MOV (requires FFmpeg for thumbnails)
 
 ## Architecture
 
@@ -68,33 +75,31 @@ NextGallery.sln
 └── Contracts/             # Shared contracts and DTOs
 ```
 
-## Integration with CodeComfy
-
-NextGallery is designed to work with the [CodeComfy VS Code extension](https://github.com/mcp-tool-shop-org/codecomfy-vscode) for a seamless ComfyUI workflow:
-
-1. Generate images/videos in VS Code with CodeComfy
-2. NextGallery automatically detects new outputs
-3. Browse, organize, and manage your generations
-
 ## Requirements
 
 - Windows 10 version 1809 or later
-- .NET 9.0 Runtime
-- Windows App SDK 1.4+
+- .NET 9.0 Runtime (included with MSIX installer)
 
-## Roadmap
+## Documentation
 
-See [ROADMAP_2026.md](ROADMAP_2026.md) for the full development roadmap including:
-- Phase 0: CodeComfy Job Agency ✅
-- Phase 1: Agency Foundation (multi-select, batch operations)
-- Phase 2: Smart Metadata (AI prompt extraction, duplicate detection)
-- Phase 3: Export Pipeline (ZIP, folder, cloud upload)
-- Phase 4: UI/UX Polish (themes, accessibility)
+- [Release Notes](RELEASE_NOTES.md)
+- [Contributing](CONTRIBUTING.md)
+- [Support](docs/SUPPORT.md)
+- [Privacy Policy](docs/PRIVACY.md)
+
+## Related Projects
+
+- [next-gallery](https://github.com/mcp-tool-shop-org/next-gallery) - CodeComfy-integrated version
+- [codecomfy-vscode](https://github.com/mcp-tool-shop-org/codecomfy-vscode) - VS Code extension for ComfyUI
+
+## Privacy
+
+NextGallery Desktop works entirely offline. Your images and data never leave your device. See our [Privacy Policy](docs/PRIVACY.md) for details.
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## Contributing
+---
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Copyright (c) 2025-2026 MCP Tool Shop
