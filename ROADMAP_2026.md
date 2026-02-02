@@ -24,6 +24,18 @@ Next-Gallery has excellent **inspection** capabilities but lacks **agency** - th
 - ❌ No AI metadata extraction
 - ❌ No duplicate detection
 
+### 2026 Industry Features (Research-Driven)
+Based on analysis of SmartGallery, ComfyUI-Gallery, and industry trends:
+
+| Feature | SmartGallery | ComfyUI-Gallery | Next-Gallery Target |
+|---------|--------------|-----------------|---------------------|
+| Compare Mode | ✅ Synchronized zoom/pan | ❌ | ✅ Diff table + visual |
+| Metadata Copy | ❌ | ✅ Clipboard | ✅ Smart copy |
+| Workflow Search | ✅ Model/sampler filters | ❌ | ✅ Full workflow query |
+| Batch ZIP Export | ❌ | ✅ | ✅ With metadata |
+| Job Management | ❌ | ❌ | ✅ Delete/re-run/clone |
+| Parameter Diff | ✅ Diff table | ❌ | ✅ Side-by-side |
+
 ### Target State (v1.0.0)
 - ✅ Everything above, plus:
 - ✅ **Full Agency** - Delete, move, copy, rename
@@ -34,6 +46,79 @@ Next-Gallery has excellent **inspection** capabilities but lacks **agency** - th
 - ✅ **Export Pipeline** - ZIP, folder, cloud upload
 - ✅ **Dark/Light Theme** - System-aware theming
 - ✅ **Keyboard-First UX** - Full vim-style navigation
+- ✅ **Compare Mode** - Side-by-side with param diff (2026)
+- ✅ **Job Management** - Delete, re-run, clone jobs (2026)
+- ✅ **Metadata Clipboard** - One-click copy prompt/params (2026)
+
+---
+
+## PHASE 0: CODECOMFY JOB AGENCY (Week 1) - NEW 2026
+
+### 0.1 Job Management Commands
+**Priority: CRITICAL** - Core agency for AI workflow management
+
+```csharp
+// CodeComfyViewModel job action commands
+public interface IJobActions
+{
+    Task DeleteJobAsync(JobRow job);           // Remove job + files
+    Task<JobRow> RerunJobAsync(JobRow job);    // Clone params, new job
+    Task OpenJobFolderAsync(JobRow job);       // Explorer to job files
+    Task CopyMetadataAsync(JobRow job);        // Prompt/params to clipboard
+}
+```
+
+**Deliverables:**
+- [x] `DeleteJobCommand` - Remove job from index + optional file deletion
+- [x] `RerunJobCommand` - Clone parameters for new generation
+- [x] `OpenJobFilesCommand` - Open job output folder in Explorer
+- [x] `CopyPromptCommand` - Copy prompt text to clipboard
+- [x] `CopyFullMetadataCommand` - Copy JSON params to clipboard
+
+### 0.2 Compare Mode (2026 Industry Standard)
+**Priority: HIGH** - Feature parity with SmartGallery
+
+```csharp
+public record CompareSession(
+    JobRow Left,
+    JobRow Right,
+    CompareViewMode ViewMode);  // SideBySide, Overlay, Diff
+
+public record ParameterDiff(
+    string Parameter,
+    string? LeftValue,
+    string? RightValue,
+    bool IsDifferent);
+```
+
+**Deliverables:**
+- [ ] Compare mode toggle (select 2 items)
+- [ ] Side-by-side image view with synchronized zoom/pan
+- [ ] Parameter diff table (model, steps, CFG, seed, etc.)
+- [ ] "What changed" summary
+- [ ] Overlay blend mode (slider 0-100%)
+
+### 0.3 Workflow Search & Filter
+**Priority: HIGH** - Find images by generation parameters
+
+```csharp
+public record WorkflowQuery(
+    string? PromptContains,
+    string? NegativePromptContains,
+    string? Model,
+    string? Sampler,
+    IntRange? Steps,
+    DoubleRange? CfgScale,
+    long? Seed);
+```
+
+**Deliverables:**
+- [ ] Workflow filter sidebar panel
+- [ ] Model dropdown (auto-populated from index)
+- [ ] Sampler dropdown
+- [ ] Steps/CFG range sliders
+- [ ] Seed search (exact match)
+- [ ] Combined filter logic (AND)
 
 ---
 
