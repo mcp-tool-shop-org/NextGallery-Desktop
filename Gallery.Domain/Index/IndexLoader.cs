@@ -7,14 +7,22 @@ namespace Gallery.Domain.Index;
 /// <summary>
 /// Loads gallery index from workspace.
 /// Pure function: reads one file, returns deterministic state.
+/// Supports configurable index path for different source types.
 /// </summary>
 public sealed partial class IndexLoader
 {
     private readonly IFileReader _fileReader;
+    private readonly string _indexSubPath;
 
-    public IndexLoader(IFileReader? fileReader = null)
+    /// <summary>
+    /// Default index path for CodeComfy workspaces.
+    /// </summary>
+    public const string CodeComfyIndexPath = ".codecomfy/outputs/index.json";
+
+    public IndexLoader(IFileReader? fileReader = null, string? indexSubPath = null)
     {
         _fileReader = fileReader ?? RealFileReader.Instance;
+        _indexSubPath = indexSubPath ?? CodeComfyIndexPath;
     }
 
     /// <summary>
@@ -31,7 +39,7 @@ public sealed partial class IndexLoader
             {
                 State = new GalleryState.Fatal
                 {
-                    Message = $"Cannot access workspace: {workspaceRoot}",
+                    Message = $"Cannot access folder: {workspaceRoot}",
                     Reason = FatalReason.WorkspaceNotFound
                 }
             };
@@ -44,14 +52,14 @@ public sealed partial class IndexLoader
             {
                 State = new GalleryState.Fatal
                 {
-                    Message = $"Workspace is not a directory: {workspaceRoot}",
+                    Message = $"Path is not a folder: {workspaceRoot}",
                     Reason = FatalReason.WorkspaceNotDirectory
                 }
             };
         }
 
-        // Build index path
-        var indexPath = Path.Combine(workspaceRoot, ".codecomfy", "outputs", "index.json");
+        // Build index path using configurable sub-path
+        var indexPath = Path.Combine(workspaceRoot, _indexSubPath.Replace('/', Path.DirectorySeparatorChar));
 
         // W3, W4, W5, I1: Index file doesn't exist
         if (!_fileReader.FileExists(indexPath))

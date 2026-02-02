@@ -16,7 +16,14 @@
 - **Smart Organization** - Filter by date, prompt, model, or custom tags
 - **Metadata Display** - View generation parameters, prompts, and settings
 - **Video Support** - Preview and organize AI-generated videos
-- **Standalone Mode** - Browse any folder of images without external dependencies
+- **Source Agnostic** - Works with any folder or auto-detects AI generation tools
+
+### Supported Sources
+- **Any Folder** - Browse any directory containing images or videos
+- **CodeComfy** - Full integration with CodeComfy VS Code extension workspaces
+- **ComfyUI** - Native ComfyUI output folder support (workflow.json metadata)
+- **A1111/Forge** - Automatic1111 and Forge WebUI outputs (.txt sidecar files)
+- **Fooocus** - Fooocus output folder support
 
 ### Compare Mode
 - **Side-by-Side View** - Compare two images visually
@@ -53,13 +60,24 @@ dotnet build Gallery.App --framework net9.0-windows10.0.19041.0
 ## Usage
 
 1. Launch NextGallery Desktop
-2. Click "Add Folder" to select an image folder
-3. Browse, search, and organize your images
+2. Click "Open Folder" to select an image folder
+3. The app auto-detects the source type (CodeComfy, ComfyUI, A1111, etc.)
+4. Browse, search, and organize your images
+
+### Command Line Options
+
+```powershell
+# Open a specific folder
+NextGallery.exe --path "C:\path\to\images"
+
+# Force a specific source type
+NextGallery.exe --path "C:\outputs" --source comfyui
+```
 
 ### Supported Formats
 
-**Images:** PNG, JPG, JPEG, WebP, BMP, GIF
-**Videos:** MP4, WebM, MOV (requires FFmpeg for thumbnails)
+**Images:** PNG, JPG, JPEG, WebP, BMP, GIF, TIFF
+**Videos:** MP4, WebM, MOV, AVI, MKV
 
 ## Architecture
 

@@ -1,5 +1,7 @@
 using Gallery.App.Services;
 using Gallery.App.Views;
+using Gallery.App.ViewModels;
+using Gallery.Domain.Sources;
 
 namespace Gallery.App;
 
@@ -19,15 +21,20 @@ public partial class App : Microsoft.Maui.Controls.Application
         Page startPage;
         string title;
 
-        if (config.IsCodeComfyMode)
+        if (!string.IsNullOrEmpty(config.WorkspacePath))
         {
-            // CodeComfy workspace mode
-            startPage = _services.GetRequiredService<CodeComfyPage>();
-            title = $"CodeComfy Gallery - {Path.GetFileName(config.WorkspacePath)}";
+            // Workspace/folder mode - auto-detect source type
+            var factory = new GallerySourceFactory();
+            var sourceType = factory.DetectSourceType(config.WorkspacePath);
+            var source = factory.CreateSource(config.WorkspacePath);
+            var viewModel = new GalleryViewModel(source);
+
+            startPage = new GalleryPage(viewModel);
+            title = $"NextGallery - {Path.GetFileName(config.WorkspacePath)} ({source.SourceName})";
         }
         else
         {
-            // Normal gallery mode
+            // No workspace - show folder picker / main page
             startPage = _services.GetRequiredService<MainPage>();
             title = "NextGallery";
         }
