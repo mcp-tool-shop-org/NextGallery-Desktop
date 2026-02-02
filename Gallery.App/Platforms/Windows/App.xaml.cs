@@ -33,7 +33,8 @@ public partial class App : MauiWinUIApplication
 		// args[0] is the executable path, actual args start at index 1
 		for (int i = 1; i < args.Length; i++)
 		{
-			if (args[i] == "--workspace" && i + 1 < args.Length)
+			// Support both --workspace and --path for flexibility
+			if ((args[i] == "--workspace" || args[i] == "--path") && i + 1 < args.Length)
 			{
 				WorkspacePath = args[i + 1];
 				break;

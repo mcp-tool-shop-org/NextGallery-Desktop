@@ -21,22 +21,26 @@ public partial class App : Microsoft.Maui.Controls.Application
         Page startPage;
         string title;
 
-        if (!string.IsNullOrEmpty(config.WorkspacePath))
-        {
-            // Workspace/folder mode - auto-detect source type
-            var factory = new GallerySourceFactory();
-            var sourceType = factory.DetectSourceType(config.WorkspacePath);
-            var source = factory.CreateSource(config.WorkspacePath);
-            var viewModel = new GalleryViewModel(source);
+        // Always use GalleryPage - it supports folder browsing
+        var factory = new GallerySourceFactory();
+        var workspacePath = config.WorkspacePath;
 
+        if (!string.IsNullOrEmpty(workspacePath) && Directory.Exists(workspacePath))
+        {
+            // Valid workspace/folder provided - load it
+            var source = factory.CreateSource(workspacePath);
+            var viewModel = new GalleryViewModel(source);
             startPage = new GalleryPage(viewModel);
-            title = $"NextGallery - {Path.GetFileName(config.WorkspacePath)} ({source.SourceName})";
+            title = $"NextGallery - {Path.GetFileName(workspacePath)} ({source.SourceName})";
         }
         else
         {
-            // No workspace - show folder picker / main page
-            startPage = _services.GetRequiredService<MainPage>();
-            title = "NextGallery";
+            // No workspace or invalid path - start with empty source, user can browse
+            var defaultPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            var source = factory.CreateSource(defaultPath);
+            var viewModel = new GalleryViewModel(source);
+            startPage = new GalleryPage(viewModel);
+            title = "NextGallery - Select a folder";
         }
 
         return new Window(startPage)

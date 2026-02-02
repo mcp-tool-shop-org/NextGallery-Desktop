@@ -14,7 +14,7 @@ namespace Gallery.App.ViewModels;
 /// </summary>
 public partial class GalleryViewModel : ObservableObject, IDisposable
 {
-    private readonly IGallerySource _source;
+    private IGallerySource _source;
     private CancellationTokenSource? _pollCts;
     private int _consecutiveFailures;
     private const int MaxFailuresBeforeBackoff = 3;
@@ -132,20 +132,21 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Initialize and perform first load.
     /// </summary>
-    public async Task InitializeAsync()
+    public Task InitializeAsync()
     {
-        await RefreshAsync();
+        Refresh();
         if (_source.SupportsPolling)
         {
             StartPolling();
         }
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Refresh from source.
     /// </summary>
     [RelayCommand]
-    public async Task RefreshAsync()
+    public void Refresh()
     {
         if (_disposed) return;
 
@@ -153,27 +154,14 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
         try
         {
-            await Task.Run(() =>
-            {
-                if (_disposed) return;
-                var result = _source.Load(_lastKnownGood);
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    if (_disposed) return;
-                    ApplyResult(result);
-                });
-            });
-
+            var result = _source.Load(_lastKnownGood);
+            ApplyResult(result);
             _consecutiveFailures = 0;
         }
         catch (Exception ex)
         {
             _consecutiveFailures++;
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                if (_disposed) return;
-                Banner = BannerInfo.Warning($"Refresh failed: {ex.Message}");
-            });
+            Banner = BannerInfo.Warning($"Refresh failed: {ex.Message}");
         }
         finally
         {
@@ -183,6 +171,14 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                 _lastPollTime = DateTime.UtcNow;
             }
         }
+    }
+
+    /// <summary>
+    /// Async refresh for background use.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        await Task.Run(() => MainThread.BeginInvokeOnMainThread(Refresh));
     }
 
     private void ApplyResult(IndexLoadResult result)
@@ -282,18 +278,28 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     #region Commands
 
     [RelayCommand]
-    private async Task OpenOutputsFolderAsync()
+    private void OpenOutputsFolder()
     {
         try
         {
             var outputsPath = _source.OutputsPath;
             if (Directory.Exists(outputsPath))
             {
-                System.Diagnostics.Process.Start("explorer.exe", outputsPath);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = outputsPath,
+                    UseShellExecute = true
+                });
             }
             else if (Directory.Exists(_source.RootPath))
             {
-                System.Diagnostics.Process.Start("explorer.exe", _source.RootPath);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = _source.RootPath,
+                    UseShellExecute = true
+                });
             }
             else
             {
@@ -304,6 +310,62 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         {
             Banner = BannerInfo.Warning($"Cannot open folder: {ex.Message}");
         }
+    }
+
+    [RelayCommand]
+    private async Task BrowseFolderAsync()
+    {
+        try
+        {
+            var result = await CommunityToolkit.Maui.Storage.FolderPicker.Default.PickAsync(CancellationToken.None);
+
+            if (result.IsSuccessful && result.Folder != null)
+            {
+                var newPath = result.Folder.Path;
+                await SwitchSourceAsync(newPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Banner = BannerInfo.Warning($"Folder picker failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Switch to a new source folder.
+    /// </summary>
+    public async Task SwitchSourceAsync(string newPath)
+    {
+        // Stop polling on old source
+        StopPolling();
+
+        // Dispose old source
+        _source.Dispose();
+
+        // Create new source
+        var factory = new GallerySourceFactory();
+        _source = factory.CreateSource(newPath);
+
+        // Update display properties
+        SourcePath = _source.RootPath;
+        SourceName = _source.SourceName;
+
+        // Clear old state
+        _lastKnownGood = null;
+        Jobs.Clear();
+        FilteredJobs.Clear();
+        SelectedJob = null;
+        _consecutiveFailures = 0;
+
+        // Load from new source
+        await Task.Run(() => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Refresh();
+            if (_source.SupportsPolling)
+            {
+                StartPolling();
+            }
+        }));
     }
 
     [RelayCommand]

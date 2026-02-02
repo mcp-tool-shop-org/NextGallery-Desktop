@@ -12,6 +12,7 @@
         <converters:BannerVisibilityConverter x:Key="BannerVisibility" />
         <converters:BannerSeverityColorConverter x:Key="BannerColor" />
         <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmpty" />
+        <converters:JobRowToThumbnailConverter x:Key="JobToThumbnail" />
     </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -55,15 +56,15 @@
                        TextColor="Gray"
                        HorizontalOptions="Center"
                        HorizontalTextAlignment="Center" />
-                <Button Text="Refresh"
-                        Command="{Binding RefreshCommand}"
+                <Button Text="Browse Folder..."
+                        Command="{Binding BrowseFolderCommand}"
                         BackgroundColor="#9B7DD4"
                         TextColor="White"
                         HorizontalOptions="Center"
                         Margin="0,16,0,0" />
-                <Button Text="Open Folder"
-                        Command="{Binding OpenOutputsFolderCommand}"
-                        BackgroundColor="#9B7DD4"
+                <Button Text="Refresh"
+                        Command="{Binding RefreshCommand}"
+                        BackgroundColor="#3D3D3D"
                         TextColor="White"
                         HorizontalOptions="Center" />
             </VerticalStackLayout>
@@ -72,7 +73,14 @@
             <Grid IsVisible="{Binding CurrentViewState, Converter={x:Static vm:GalleryViewStateConverters.IsList}}"
                   RowDefinitions="Auto,*">
                 <!-- Header -->
-                <HorizontalStackLayout Grid.Row="0" Padding="16,8" Spacing="16" BackgroundColor="#2D2D2D">
+                <HorizontalStackLayout Grid.Row="0" Padding="16,8" Spacing="12" BackgroundColor="#2D2D2D">
+                    <Button Text="📁"
+                            Command="{Binding BrowseFolderCommand}"
+                            BackgroundColor="#4D4D4D"
+                            TextColor="White"
+                            VerticalOptions="Center"
+                            Padding="10,6"
+                            ToolTipProperties.Text="Browse for folder..." />
                     <Label Text="{Binding SourceName}"
                            VerticalOptions="Center"
                            FontSize="14"
@@ -87,7 +95,7 @@
                             TextColor="White"
                             VerticalOptions="Center"
                             Padding="12,6" />
-                    <Button Text="Open Folder"
+                    <Button Text="Open in Explorer"
                             Command="{Binding OpenOutputsFolderCommand}"
                             BackgroundColor="#3D3D3D"
                             TextColor="White"
@@ -110,20 +118,19 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="index:JobRow">
                             <Frame Margin="8,4" Padding="12" BackgroundColor="#2D2D2D" BorderColor="#3D3D3D" CornerRadius="8">
-                                <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12">
-                                    <!-- Thumbnail placeholder -->
-                                    <Frame Grid.RowSpan="3"
-                                           BackgroundColor="#3D3D3D"
-                                           WidthRequest="80"
-                                           HeightRequest="80"
-                                           CornerRadius="4"
-                                           Padding="0">
+                                <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12">
+                                    <!-- Type Icon -->
+                                    <Border Grid.RowSpan="3"
+                                            BackgroundColor="#3D3D3D"
+                                            WidthRequest="60"
+                                            HeightRequest="60"
+                                            StrokeShape="RoundRectangle 4">
                                         <Label Text="{Binding Kind}"
                                                HorizontalOptions="Center"
                                                VerticalOptions="Center"
                                                TextColor="#9B7DD4"
-                                               FontSize="12" />
-                                    </Frame>
+                                               FontSize="11" />
+                                    </Border>
 
                                     <!-- Job Info -->
                                     <Label Grid.Column="1" Grid.Row="0"
@@ -138,7 +145,6 @@
                                            FontSize="12"
                                            TextColor="Gray" />
                                     <HorizontalStackLayout Grid.Column="1" Grid.Row="2" Spacing="8">
-                                        <Label Text="{Binding PresetId}" FontSize="11" TextColor="#9B7DD4" />
                                         <Label Text="{Binding Seed, StringFormat='Seed: {0}'}" FontSize="11" TextColor="DimGray" />
                                         <Label Text="{Binding Files.Count, StringFormat='{0} files'}" FontSize="11" TextColor="DimGray" />
                                     </HorizontalStackLayout>
@@ -163,14 +169,14 @@
                        TextColor="Gray"
                        HorizontalOptions="Center"
                        HorizontalTextAlignment="Center" />
-                <Button Text="Refresh"
-                        Command="{Binding RefreshCommand}"
+                <Button Text="Browse Folder..."
+                        Command="{Binding BrowseFolderCommand}"
                         BackgroundColor="#9B7DD4"
                         TextColor="White"
                         HorizontalOptions="Center"
                         Margin="0,16,0,0" />
-                <Button Text="Open Folder"
-                        Command="{Binding OpenOutputsFolderCommand}"
+                <Button Text="Refresh"
+                        Command="{Binding RefreshCommand}"
                         BackgroundColor="#3D3D3D"
                         TextColor="White"
                         HorizontalOptions="Center" />

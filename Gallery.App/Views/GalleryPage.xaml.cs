@@ -1,3 +1,4 @@
+using Gallery.App.Converters;
 using Gallery.App.ViewModels;
 
 namespace Gallery.App.Views;
@@ -15,6 +16,18 @@ public partial class GalleryPage : ContentPage
     {
         _viewModel = viewModel;
         BindingContext = viewModel;
+
+        // Set the source for thumbnail conversion
+        JobRowToThumbnailConverter.CurrentSource = viewModel.Source;
+
+        // Update converter source when SourcePath changes (folder switch)
+        viewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(GalleryViewModel.SourcePath))
+            {
+                JobRowToThumbnailConverter.CurrentSource = viewModel.Source;
+            }
+        };
     }
 
     protected override async void OnAppearing()
@@ -23,6 +36,8 @@ public partial class GalleryPage : ContentPage
 
         if (_viewModel != null)
         {
+            // Update source reference (in case it changed)
+            JobRowToThumbnailConverter.CurrentSource = _viewModel.Source;
             await _viewModel.InitializeAsync();
         }
 
